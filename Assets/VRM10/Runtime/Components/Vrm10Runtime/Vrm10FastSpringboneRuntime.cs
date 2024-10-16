@@ -3,6 +3,8 @@ using UniGLTF;
 using UnityEngine;
 using UniGLTF.SpringBoneJobs.InputPorts;
 using System.Threading.Tasks;
+using UniGLTF.SpringBoneJobs.Blittables;
+using UniGLTF.SpringBoneJobs;
 
 namespace UniVRM10
 {
@@ -17,18 +19,21 @@ namespace UniVRM10
         private FastSpringBones.FastSpringBoneService m_fastSpringBoneService;
         private FastSpringBoneBuffer m_fastSpringBoneBuffer;
 
-        public Vector3 ExternalForce
+        public void SetJointLevel(Transform joint, BlittableJointMutable jointSettings)
         {
-            get => m_fastSpringBoneBuffer.ExternalForce;
-            set => m_fastSpringBoneBuffer.ExternalForce = value;
-        }
-        public bool IsSpringBoneEnabled
-        {
-            get => m_fastSpringBoneBuffer.IsSpringBoneEnabled;
-            set => m_fastSpringBoneBuffer.IsSpringBoneEnabled = value;
+            if (m_fastSpringBoneService.BufferCombiner.Combined is FastSpringBoneCombinedBuffer combined)
+            {
+                combined.SetJointLevel(joint, jointSettings);
+            }
         }
 
-        public float DeltaTime => throw new NotImplementedException();
+        public void SetModelLevel(Transform modelRoot, BlittableModelLevel modelSettings)
+        {
+            if (m_fastSpringBoneService.BufferCombiner.Combined is FastSpringBoneCombinedBuffer combined)
+            {
+                combined.SetModelLevel(modelRoot, modelSettings);
+            }
+        }
 
         public async Task InitializeAsync(Vrm10Instance instance, IAwaitCaller awaitCaller)
         {
@@ -94,13 +99,14 @@ namespace UniVRM10
         {
             // Spring の joint に対応する transform の回転を初期状態
             var instance = m_instance.GetComponent<RuntimeGltfInstance>();
-            for (int i = 0; i < m_fastSpringBoneBuffer.Transforms.Length; ++i)
+            foreach (var logic in m_fastSpringBoneBuffer.Logics)
             {
-                var transform = m_fastSpringBoneBuffer.Transforms[i];
+                var transform = m_fastSpringBoneBuffer.Transforms[logic.headTransformIndex];
                 transform.localRotation = instance.InitialTransformStates[transform].LocalRotation;
             }
 
-            // TODO: jobs のバッファにも反映する必要あり
+            // jobs のバッファにも反映する必要あり
+            m_fastSpringBoneService.BufferCombiner.InitializeJointsLocalRotation(m_fastSpringBoneBuffer);
         }
 
         public void Process()

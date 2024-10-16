@@ -3,6 +3,7 @@ using UnityEngine;
 using UniGLTF.SpringBoneJobs.InputPorts;
 using UniGLTF.SpringBoneJobs;
 using System.Threading.Tasks;
+using UniGLTF.SpringBoneJobs.Blittables;
 
 namespace UniVRM10
 {
@@ -19,18 +20,21 @@ namespace UniVRM10
         public FastSpringBoneBufferCombiner m_bufferCombiner = new();
         private FastSpringBoneScheduler m_fastSpringBoneScheduler;
 
-        public Vector3 ExternalForce
+        public void SetJointLevel(Transform joint, BlittableJointMutable jointSettings)
         {
-            get => m_fastSpringBoneBuffer.ExternalForce;
-            set => m_fastSpringBoneBuffer.ExternalForce = value;
-        }
-        public bool IsSpringBoneEnabled
-        {
-            get => m_fastSpringBoneBuffer.IsSpringBoneEnabled;
-            set => m_fastSpringBoneBuffer.IsSpringBoneEnabled = value;
+            if (m_bufferCombiner.Combined is FastSpringBoneCombinedBuffer combined)
+            {
+                combined.SetJointLevel(joint, jointSettings);
+            }
         }
 
-        public float DeltaTime => Time.deltaTime;
+        public void SetModelLevel(Transform modelRoot, BlittableModelLevel modelSettings)
+        {
+            if (m_bufferCombiner.Combined is FastSpringBoneCombinedBuffer combined)
+            {
+                combined.SetModelLevel(modelRoot, modelSettings);
+            }
+        }
 
         public Vrm10FastSpringboneRuntimeStandalone()
         {
@@ -103,18 +107,19 @@ namespace UniVRM10
         {
             // Spring の joint に対応する transform の回転を初期状態
             var instance = m_instance.GetComponent<RuntimeGltfInstance>();
-            for (int i = 0; i < m_fastSpringBoneBuffer.Transforms.Length; ++i)
+            foreach (var logic in m_fastSpringBoneBuffer.Logics)
             {
-                var transform = m_fastSpringBoneBuffer.Transforms[i];
+                var transform = m_fastSpringBoneBuffer.Transforms[logic.headTransformIndex];
                 transform.localRotation = instance.InitialTransformStates[transform].LocalRotation;
             }
 
-            // TODO: jobs のバッファにも反映する必要あり
+            // jobs のバッファにも反映する必要あり
+            m_bufferCombiner.InitializeJointsLocalRotation(m_fastSpringBoneBuffer);
         }
 
         public void Process()
         {
-            m_fastSpringBoneScheduler.Schedule(DeltaTime).Complete();
+            m_fastSpringBoneScheduler.Schedule(Time.deltaTime).Complete();
         }
     }
 }
